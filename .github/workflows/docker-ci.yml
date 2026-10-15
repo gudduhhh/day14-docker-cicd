@@ -1,3 +1,4 @@
+
 name: docker-ci
 
 on:
@@ -11,6 +12,7 @@ permissions:
 jobs:
   build-test-scan:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,6 +38,7 @@ jobs:
         shell: bash
         run: |
           docker run -d --name api -p 5000:5000 winter-arc-app:${{ github.sha }}
+
           for i in {1..10}; do
             if curl -fsS http://localhost:5000/health; then
               docker rm -f api
@@ -43,12 +46,13 @@ jobs:
             fi
             sleep 2
           done
+
           docker logs api
           docker rm -f api
           exit 1
 
       - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           image-ref: winter-arc-app:${{ github.sha }}
           format: table
@@ -67,10 +71,13 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-        run: docker tag winter-arc-app:${{ github.sha }} "$DOCKERHUB_USERNAME/winter-arc-app:${{ github.sha }}"
+        run: |
+          docker tag winter-arc-app:${{ github.sha }} \
+            "$DOCKERHUB_USERNAME/winter-arc-app:${{ github.sha }}"
 
       - name: Publish SHA-tagged image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-        run: docker push "$DOCKERHUB_USERNAME/winter-arc-app:${{ github.sha }}"
+        run: |
+          docker push "$DOCKERHUB_USERNAME/winter-arc-app:${{ github.sha }}"
